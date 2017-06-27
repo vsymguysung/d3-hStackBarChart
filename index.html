@@ -1,167 +1,107 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<style>
-
-form {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  position: absolute;
-  left: 10px;
-  top: 10px;
-}
-
-label {
-  display: block;
-}
-
-</style>
-<form>
-  <label><input type="radio" name="mode" value="grouped"> Grouped</label>
-  <label><input type="radio" name="mode" value="stacked" checked> Stacked</label>
-</form>
-<svg id="chart" width="600" height="500">
-</svg>
+<svg width="640" height="400"></svg>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
-var n = 4, // The number of series.
-    m = 3; // The number of values per series.
+var tooltip = d3.select("body")
+                .append("div")
+                .style("position", "absolute")
+                .style("z-index", "10")
+                .style("visibility", "hidden")
+                .text("a simple tooltip");
+//var data = [
+//  {month: "China", apples: 3840, bananas: 1920, cherries: -1960},
+//  {month: "USA", apples: 1600, bananas: 1440, cherries: -960},
+//  {month: "India", apples:  640, bananas:  960, cherries: -640},
+//  {month: "Brazil", apples:  320, bananas:  480, cherries: -640}
+//];
 
-// The yz array has m elements, representing the y-values shared by all series.
-// The xz array has n elements, representing the x-values of each of the n series.
-// Each xz[i] is an array of m non-negative numbers representing a x-value for yz[i].
-// The x01z array has the same structure as xz, but with stacked [x₀, x₁] instead of x.
-var yz = d3.range(m);
+var data = [
+  {month: "China", apples: 3840, bananas: 1920, cherries: 700, index: 0},
+  {month: "USA", apples: 1600, bananas: 1440, cherries: 960, index: 3},
+  {month: "India", apples:  640, bananas:  960, cherries: 640, index: 2},
+  {month: "Brazil", apples:  320, bananas:  480, cherries: 640, index: 1}
+];
 
-var xz = d3.range(n).map(function() { return bumps(m); });
+data.sort(function(x, y){
+  //return d3.ascending(x.month, y.month);
+  return d3.ascending(x.index, y.index);
+});
 
-var x01z = d3.stack().keys(d3.range(n))(d3.transpose(xz));
-
-var xMax = d3.max(xz, function(x) { return d3.max(x); });
-
-var x1Max = d3.max(x01z, function(x) { return d3.max(x, function(d) { return d[1]; }); });
+var series = d3.stack()
+    .keys(["apples", "bananas", "cherries"])
+    .offset(d3.stackOffsetDiverging)
+    (data);
 
 var svg = d3.select("svg"),
-    margin = {top: 70, right: 10, bottom: 20, left: 30},
-    width = +svg.attr("width") - margin.left - margin.right,
-    height = +svg.attr("height") - margin.top - margin.bottom,
-    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-var x = d3.scaleLinear()
-    .domain([0, x1Max])
-    .range([0, width]);
+    margin = {top: 20, right: 10, bottom: 30, left: 60},
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
 
 var y = d3.scaleBand()
-    .domain(yz)
-    .rangeRound([0, height])
-    .padding(0.08);
+    .domain(data.map(function(d) { return d.month; }))
+    .rangeRound([margin.top, height - margin.bottom])
+    .padding(0.1);
 
-var color = d3.scaleOrdinal()
-    .domain(d3.range(n))
-    .range(d3.schemeCategory20c);
+var x = d3.scaleLinear()
+    .domain([d3.min(series, stackMin), d3.max(series, stackMax)])
+    .rangeRound([margin.left, width- margin.right]);
 
-var series = g.selectAll(".series")
-  .data(x01z)
+var z = d3.scaleOrdinal(d3.schemeCategory10);
+
+svg.append("g")
+  .selectAll("g")
+  .data(series)
   .enter().append("g")
-    .attr("fill", function(d, i) { return color(i); });
-
-var rect = series.selectAll("rect")
+    .attr("fill", function(d) { return z(d.key); })
+  .selectAll("rect")
   .data(function(d) { return d; })
   .enter().append("rect")
-    .attr("y", function(d, i) { return y(i); })
-    .attr("x", 0)
-    .attr("height", y.bandwidth())
-    .attr("width", 0);
+    .attr("height", y.bandwidth)
+    .attr("y", function(d) { return y(d.data.month); })
+    .attr("x", function(d) { return x(d[0]); })
+    .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+    .on("mouseover", function(d){tooltip.text(d[1]-d[0]); return tooltip.style("visibility", "visible");})
+    .on("mousemove", function(){return tooltip.style("top", (event.pageY-10)+"px").style("left",(event.pageX+10)+"px");})
+    .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
 
-rect.transition()
-    .delay(function(d, i) { return i * 10; })
-    .attr("x", function(d, i) {
-      return x(d[0]); })
-    .attr("width", function(d, i) {
+svg.append("g")
+    .attr("transform", "translate(0," + margin.top + ")")
+    .call(d3.axisTop(x));
 
-      if (!(i % 3)) console.log("-----------");
-      console.log('idx:' + i +' d[0]:' + x(d[0]));
-      console.log('idx:' + i +' d[1]:' + x(d[1]));
+svg.append("g")
+    .attr("transform", "translate(" + margin.left + ",0)")
+    .call(d3.axisLeft(y));
 
-      return x(d[1]) - x(d[0]);
-    });
-
-g.append("g")
-    .attr("class", "axis axis--y")
-    .call(d3.axisLeft(y)
-        .tickSize(0)
-        .tickPadding(1));
-
-
-
-d3.selectAll("input")
-    .on("change", changed);
-
-var timeout = d3.timeout(function() {
-  d3.select("input[value=\"grouped\"]")
-      .property("checked", true)
-      .dispatch("change");
-}, 2000);
-
-function changed() {
-  //timeout.stop();
-  if (this.value === "grouped") transitionGrouped();
-  else transitionStacked();
-
+function stackMin(serie) {
+  return d3.min(serie, function(d) { return d[0]; });
 }
 
-function transitionGrouped() {
-  x.domain([0, xMax]);
-
-  rect.transition()
-      .duration(500)
-      .delay(function(d, i) { return i * 10; })
-      .attr("y", function(d, i) { return y(i) + y.bandwidth() / n * this.parentNode.__data__.key; })
-      .attr("height", y.bandwidth() / n)
-    .transition()
-      .attr("x", function(d) { return x(0); })
-      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
+function stackMax(serie) {
+  return d3.max(serie, function(d) { return d[1]; });
 }
 
-function transitionStacked() {
-  x.domain([0, x1Max]);
+var legend = svg.selectAll(".legend")
+    .data(series.slice(0))
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(-20," + i * 20 + ")"; })
+      .style("font", "10px sans-serif");
 
-  rect.transition()
-      .duration(500)
-      .delay(function(d, i) { return i * 10; })
-      .attr("x", function(d) { return x(d[0]); })
-      .attr("width", function(d) { return x(d[1]) - x(d[0]); })
-    .transition()
-      .attr("y", function(d, i) { return y(i); })
-      .attr("height", y.bandwidth());
-}
+  d3.select('svg').attr("width", width + margin.right + margin.left);
 
-// Returns an array of m psuedorandom, smoothly-varying non-negative numbers.
-// Inspired by Lee Byron’s test data generator.
-// http://leebyron.com/streamgraph/
-function bumps(m) {
-  var values = [], i, j, w, x, y, z;
+  legend.append("rect")
+      .attr("x", width + 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .attr("fill", function(d, i){  console.log(JSON.stringify(d.key)); return z(d.key)});
 
-  // Initialize with uniform random values in [0.1, 0.2).
-  for (i = 0; i < m; ++i) {
-    values[i] = 0.1 + 0.1 * Math.random();
-  }
+  legend.append("text")
+      .attr("x", width + 44)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .attr("text-anchor", "start")
+      .text(function(d, i) {  return d.key; });
 
-  // Add five random bumps.
-  for (j = 0; j < 5; ++j) {
-    x = 1 / (0.1 + Math.random());
-    y = 2 * Math.random() - 0.5;
-    z = 10 / (0.1 + Math.random());
-    for (i = 0; i < m; i++) {
-      w = (i / m - y) * z;
-      values[i] += x * Math.exp(-w * w);
-    }
-  }
-
-  // Ensure all values are positive.
-  for (i = 0; i < m; ++i) {
-    values[i] = Math.max(0, values[i]);
-  }
-
-  return values;
-}
 </script>
