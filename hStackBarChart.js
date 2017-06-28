@@ -22,10 +22,10 @@ var axisTransitionDuration = 700;
 var reRenderTransitionDuration = 1000;
 
 var dataset = [
-  {billid: "HB 4643", agree: 67, disagree: 54, index: 0},
-  {billid: "HB 6066", agree: 87, disagree: 44, index: 1},
-  {billid: "HB 5851", agree: 164, disagree: 34, index: 3},
-  {billid: "HB 5400", agree: 58, disagree: 18, index: 2}
+  {billid: "HB 4643", agree: 67, disagree: -54, index: 121},
+  {billid: "HB 6066", agree: 87, disagree: -44, index: 131},
+  {billid: "HB 5851", agree: 164, disagree: -34, index: 198},
+  {billid: "HB 5400", agree: 58, disagree: -18, index: 76}
 ];
 
 var itemNames = d3.keys(dataset[0]).filter(function(key) {
