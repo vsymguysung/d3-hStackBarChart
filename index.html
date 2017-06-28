@@ -87,7 +87,7 @@ var z = d3.scaleOrdinal(d3.schemeCategory10);
 
 //
 // Rendering
-function render() {
+function renderGraph() {
   svg.append("g")
        .attr("class", "container")
      .selectAll("g")
@@ -110,17 +110,23 @@ function render() {
   svg.selectAll("g.layer").exit().remove();
 }
 
-svg.append("g")
-    .attr("class", "x--axis")
-    .attr("transform", "translate(0," + margin.top + ")")
-    .call(d3.axisTop(x));
+function renderXaxis() {
+  svg.append("g")
+      .attr("class", "x--axis")
+      .attr("transform", "translate(0," + margin.top + ")")
+      .call(d3.axisTop(x));
+}
 
-svg.append("g")
-    .attr("class", "y--axis")
-    .attr("transform", "translate(" + (margin.left - 10) + ",0)")
-    .call(d3.axisLeft(y));
+function renderYaxis() {
+  svg.append("g")
+      .attr("class", "y--axis")
+      .attr("transform", "translate(" + (margin.left - 10) + ",0)")
+      .call(d3.axisLeft(y));
+}
 
-render();
+renderGraph();
+renderXaxis();
+renderYaxis();
 
 function stackMin(serie) {
   return d3.min(serie, function(d) { return d[0]; });
@@ -139,6 +145,30 @@ function orderByChanged() {
   else if (this.value === "orderbydisagree") orderByDisagree();
 }
 
+function updateGraph() {
+  svg.selectAll("g.layer")
+    .data(series)
+      .attr("fill", function(d) {
+        console.log("0: d:" + JSON.stringify(d));
+        return z(d.key);
+      })
+    .selectAll("rect.bar")
+    .data(function(d) {
+      console.log("1: d:" + JSON.stringify(d));
+      return d;
+    })
+      .transition()
+      .attr("height", y.bandwidth)
+      .attr("y", function(d) {
+        console.log("2: d:" + JSON.stringify(d));
+        console.log("2: d.data:" + JSON.stringify(d.data));
+        console.log("2: d.data.billid:" + JSON.stringify(d.data.billid));
+        return y(d.data.billid);
+      })
+      .attr("x", function(d) { return x(d[0]); })
+      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
+}
+
 function orderByIndex() {
   console.log("orderByIndex called.");
 
@@ -146,6 +176,12 @@ function orderByIndex() {
   data.sort(function(x, y){
     return d3.ascending(x.index, y.index);
   });
+
+  // Series Update
+  series = d3.stack()
+    .keys(["agree", "disagree"])
+    .offset(d3.stackOffsetDiverging)
+    (data);
 
   // Domain Update
   var _billIds = data.map( function(d) {
@@ -156,23 +192,8 @@ function orderByIndex() {
   // Y Axis Update
   d3.select(".y--axis").transition().call(d3.axisLeft(y));
 
-  // Series Update
-  series = d3.stack()
-    .keys(["agree", "disagree"])
-    .offset(d3.stackOffsetDiverging)
-    (data);
-
-  svg.selectAll("g.layer")
-    .data(series)
-      .attr("fill", function(d) { return z(d.key); })
-    .selectAll("rect.bar")
-    .data(function(d) { return d; })
-      .transition()
-      .attr("height", y.bandwidth)
-      .attr("y", function(d) { return y(d.data.billid); })
-      .attr("x", function(d) { return x(d[0]); })
-      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
-
+  // Update Graph
+  updateGraph();
 }
 
 function orderByAgree() {
@@ -183,6 +204,12 @@ function orderByAgree() {
     return d3.descending(x.agree, y.agree);
   });
 
+  // Series Update
+  series = d3.stack()
+    .keys(["agree", "disagree"])
+    .offset(d3.stackOffsetDiverging)
+    (data);
+
   // Domain Update
   var _billIds = data.map( function(d) {
         return d.billid;
@@ -192,34 +219,9 @@ function orderByAgree() {
   // Y Axis Update
   d3.select(".y--axis").transition().call(d3.axisLeft(y));
 
-  // Series Update
-  series = d3.stack()
-    .keys(["agree", "disagree"])
-    .offset(d3.stackOffsetDiverging)
-    (data);
+  // Update Graph
+  updateGraph();
 
-  // Re-Render
-  svg.selectAll("g.layer")
-    .data(series)
-      .attr("fill", function(d) {
-        console.log("0: d:" + JSON.stringify(d));
-        return z(d.key);
-      })
-    .selectAll("rect.bar")
-    .data(function(d) {
-      console.log("1: d:" + JSON.stringify(d));
-      return d;
-    })
-      .transition()
-      .attr("height", y.bandwidth)
-      .attr("y", function(d) {
-        console.log("2: d:" + JSON.stringify(d));
-        console.log("2: d.data:" + JSON.stringify(d.data));
-        console.log("2: d.data.billid:" + JSON.stringify(d.data.billid));
-        return y(d.data.billid);
-      })
-      .attr("x", function(d) { return x(d[0]); })
-      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
 }
 
 function orderByDisagree() {
@@ -230,6 +232,12 @@ function orderByDisagree() {
     return d3.descending(x.disagree, y.disagree);
   });
 
+  // Series Update
+  series = d3.stack()
+    .keys(["agree", "disagree"])
+    .offset(d3.stackOffsetDiverging)
+    (data);
+
   // Domain Update
   var _billIds = data.map( function(d) {
         return d.billid;
@@ -239,34 +247,8 @@ function orderByDisagree() {
   // Y Axis Update
   d3.select(".y--axis").transition().call(d3.axisLeft(y));
 
-  // Series Update
-  series = d3.stack()
-    .keys(["agree", "disagree"])
-    .offset(d3.stackOffsetDiverging)
-    (data);
-
-  // Re-Render
-  svg.selectAll("g.layer")
-    .data(series)
-      .attr("fill", function(d) {
-        console.log("0: d:" + JSON.stringify(d));
-        return z(d.key);
-      })
-    .selectAll("rect.bar")
-    .data(function(d) {
-      console.log("1: d:" + JSON.stringify(d));
-      return d;
-    })
-      .transition()
-      .attr("height", y.bandwidth)
-      .attr("y", function(d) {
-        console.log("2: d:" + JSON.stringify(d));
-        console.log("2: d.data:" + JSON.stringify(d.data));
-        console.log("2: d.data.billid:" + JSON.stringify(d.data.billid));
-        return y(d.data.billid);
-      })
-      .attr("x", function(d) { return x(d[0]); })
-      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
+  // Update Graph
+  updateGraph();
 }
 
 //
