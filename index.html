@@ -4,43 +4,72 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
+
+//var data = [
+//  {country: "China", apples: 3840, bananas: 1920, cherries: -1960},
+//  {country: "USA", apples: 1600, bananas: 1440, cherries: -960},
+//  {country: "India", apples:  640, bananas:  960, cherries: -640},
+//  {country: "Brazil", apples:  320, bananas:  480, cherries: -640}
+//];
+
+var data = [
+  {country: "China", apples: 3840, bananas: 1920, cherries: 700, index: 0},
+  {country: "USA", apples: 1600, bananas: 1440, cherries: 960, index: 3},
+  {country: "India", apples:  640, bananas:  960, cherries: 640, index: 2},
+  {country: "Brazil", apples:  320, bananas:  480, cherries: 640, index: 1}
+];
+
+var countryNames = data.map( function(d) {
+      return d.country;
+});
+
+var fruitNames = d3.keys(data[0]).filter(function(key) {
+                                    if (key !== "country" && key !== "index")
+                                      return true;
+                                    else
+                                      return false;
+                 });
+
 var tooltip = d3.select("body")
                 .append("div")
                 .style("position", "absolute")
                 .style("z-index", "10")
                 .style("visibility", "hidden")
                 .text("a simple tooltip");
-//var data = [
-//  {month: "China", apples: 3840, bananas: 1920, cherries: -1960},
-//  {month: "USA", apples: 1600, bananas: 1440, cherries: -960},
-//  {month: "India", apples:  640, bananas:  960, cherries: -640},
-//  {month: "Brazil", apples:  320, bananas:  480, cherries: -640}
-//];
 
-var data = [
-  {month: "China", apples: 3840, bananas: 1920, cherries: 700, index: 0},
-  {month: "USA", apples: 1600, bananas: 1440, cherries: 960, index: 3},
-  {month: "India", apples:  640, bananas:  960, cherries: 640, index: 2},
-  {month: "Brazil", apples:  320, bananas:  480, cherries: 640, index: 1}
-];
+data.forEach(function(d) {
+    d.fruitsConsumed = fruitNames.map(function(name) {
+        return {
+            "fruitName": name,
+            "consumedCount": d[name]
+        };
+    });
+
+    d.totalFruit = d3.sum( d.fruitsConsumed, function(d) {
+        return d.consumedCount;
+    });
+});
 
 data.sort(function(x, y){
-  //return d3.ascending(x.month, y.month);
   return d3.ascending(x.index, y.index);
 });
 
+//
+// Data Transform
 var series = d3.stack()
     .keys(["apples", "bananas", "cherries"])
     .offset(d3.stackOffsetDiverging)
     (data);
 
+
+// Scales
 var svg = d3.select("svg"),
     margin = {top: 20, right: 10, bottom: 30, left: 60},
     width = +svg.attr("width"),
     height = +svg.attr("height");
 
 var y = d3.scaleBand()
-    .domain(data.map(function(d) { return d.month; }))
+    .domain(countryNames)
     .rangeRound([margin.top, height - margin.bottom])
     .padding(0.1);
 
@@ -49,7 +78,21 @@ var x = d3.scaleLinear()
     .rangeRound([margin.left, width- margin.right]);
 
 var z = d3.scaleOrdinal(d3.schemeCategory10);
+//var z = d3.scaleOrdinal()
+//          .domain(fruitNames)
+//          .range(["#d62728", "#2ca02c", "#9467bd"]);
 
+
+//
+// DBG
+var layers = fruitNames.map(function(fruitName) {
+    return data.map(function(d) {
+        return {"y": y(d.country), "x": d[fruitName], "fruitName":fruitName};
+    });
+});
+
+//
+// Rendering
 svg.append("g")
   .selectAll("g")
   .data(series)
@@ -59,7 +102,7 @@ svg.append("g")
   .data(function(d) { return d; })
   .enter().append("rect")
     .attr("height", y.bandwidth)
-    .attr("y", function(d) { return y(d.data.month); })
+    .attr("y", function(d) { return y(d.data.country); })
     .attr("x", function(d) { return x(d[0]); })
     .attr("width", function(d) { return x(d[1]) - x(d[0]); })
     .on("mouseover", function(d){tooltip.text(d[1]-d[0]); return tooltip.style("visibility", "visible");})
@@ -82,6 +125,8 @@ function stackMax(serie) {
   return d3.max(serie, function(d) { return d[1]; });
 }
 
+//
+// Render Legend
 var legend = svg.selectAll(".legend")
     .data(series.slice(0))
     .enter().append("g")
