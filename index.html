@@ -4,6 +4,7 @@
 <form>
   <label><input type="radio" name="orderby" value="orderbyindex" checked> Order By Index </label>
   <label><input type="radio" name="orderby" value="orderbyagree" > Order By Agree </label>
+  <label><input type="radio" name="orderby" value="orderbydisagree" > Order By Disagree </label>
 </form>
 
 <div id="container" class="svg-container">
@@ -26,8 +27,8 @@ var height = 400;
 var data = [
   {billid: "HB 4643", agree: 67, disagree: 54, index: 0},
   {billid: "HB 6066", agree: 87, disagree: 44, index: 1},
-  {billid: "HB 5851", agree: 160, disagree: 34, index: 2},
-  {billid: "HB 5400", agree: 58, disagree: 18, index: 3}
+  {billid: "HB 5851", agree: 160, disagree: 34, index: 3},
+  {billid: "HB 5400", agree: 58, disagree: 18, index: 2}
 ];
 
 var itemNames = d3.keys(data[0]).filter(function(key) {
@@ -59,9 +60,10 @@ var billIds = data.map( function(d) {
 //
 // Data Transform
 var series = d3.stack()
-    .keys(["agree", "disagree"])
+    .keys(itemNames) //.keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
     (data);
+
 
 // Scales
 var svg = d3.select("svg"),
@@ -129,11 +131,12 @@ function stackMax(serie) {
 }
 
 d3.selectAll("input")
-    .on("change", changed);
+    .on("change", orderByChanged);
 
-function changed() {
+function orderByChanged() {
   if (this.value === "orderbyindex") orderByIndex();
   else if (this.value === "orderbyagree") orderByAgree();
+  else if (this.value === "orderbydisagree") orderByDisagree();
 }
 
 function orderByIndex() {
@@ -178,6 +181,53 @@ function orderByAgree() {
   // Data Transfrom
   data.sort(function(x, y){
     return d3.descending(x.agree, y.agree);
+  });
+
+  // Domain Update
+  var _billIds = data.map( function(d) {
+        return d.billid;
+  });
+  y.domain(_billIds);
+
+  // Y Axis Update
+  d3.select(".y--axis").transition().call(d3.axisLeft(y));
+
+  // Series Update
+  series = d3.stack()
+    .keys(["agree", "disagree"])
+    .offset(d3.stackOffsetDiverging)
+    (data);
+
+  // Re-Render
+  svg.selectAll("g.layer")
+    .data(series)
+      .attr("fill", function(d) {
+        console.log("0: d:" + JSON.stringify(d));
+        return z(d.key);
+      })
+    .selectAll("rect.bar")
+    .data(function(d) {
+      console.log("1: d:" + JSON.stringify(d));
+      return d;
+    })
+      .transition()
+      .attr("height", y.bandwidth)
+      .attr("y", function(d) {
+        console.log("2: d:" + JSON.stringify(d));
+        console.log("2: d.data:" + JSON.stringify(d.data));
+        console.log("2: d.data.billid:" + JSON.stringify(d.data.billid));
+        return y(d.data.billid);
+      })
+      .attr("x", function(d) { return x(d[0]); })
+      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
+}
+
+function orderByDisagree() {
+  console.log("orderByDisagree called.");
+
+  // Data Transfrom
+  data.sort(function(x, y){
+    return d3.descending(x.disagree, y.disagree);
   });
 
   // Domain Update
