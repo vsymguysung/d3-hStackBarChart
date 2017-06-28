@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+
+<form>
+  <label><input type="radio" name="orderby" value="orderbyindex" checked> Order By Index </label>
+  <label><input type="radio" name="orderby" value="orderbyagree" > Order By Agree </label>
+</form>
+
 <svg width="640" height="400"></svg>
+
 <script src="https://d3js.org/d3.v4.min.js"></script>
+
 <script>
-
-
-//var data = [
-//  {country: "China", apples: 3840, bananas: 1920, cherries: -1960},
-//  {country: "USA", apples: 1600, bananas: 1440, cherries: -960},
-//  {country: "India", apples:  640, bananas:  960, cherries: -640},
-//  {country: "Brazil", apples:  320, bananas:  480, cherries: -640}
-//];
+var m_top = 20;
+var m_bottom = 30;
+var m_left = 70;
+var m_right = 10;
 
 var data = [
-  {country: "China", apples: 3840, bananas: 1920, cherries: 700, index: 0},
-  {country: "USA", apples: 1600, bananas: 1440, cherries: 960, index: 3},
-  {country: "India", apples:  640, bananas:  960, cherries: 640, index: 2},
-  {country: "Brazil", apples:  320, bananas:  480, cherries: 640, index: 1}
+  {billid: "HB 4643", agree: 67, disagree: 54, index: 0},
+  {billid: "HB 6066", agree: 87, disagree: 44, index: 1},
+  {billid: "HB 5851", agree: 97, disagree: 34, index: 2},
+  {billid: "HB 5400", agree: 58, disagree: 18, index: 3}
 ];
 
-var countryNames = data.map( function(d) {
-      return d.country;
-});
-
-var fruitNames = d3.keys(data[0]).filter(function(key) {
-                                    if (key !== "country" && key !== "index")
+var itemNames = d3.keys(data[0]).filter(function(key) {
+                                    if (key !== "billid" && key !== "index")
                                       return true;
                                     else
                                       return false;
@@ -33,45 +33,39 @@ var fruitNames = d3.keys(data[0]).filter(function(key) {
 var tooltip = d3.select("body")
                 .append("div")
                 .style("position", "absolute")
+                .style("color", "white")
                 .style("z-index", "10")
                 .style("visibility", "hidden")
                 .text("a simple tooltip");
 
-data.forEach(function(d) {
-    d.fruitsConsumed = fruitNames.map(function(name) {
-        return {
-            "fruitName": name,
-            "consumedCount": d[name]
-        };
-    });
-
-    d.totalFruit = d3.sum( d.fruitsConsumed, function(d) {
-        return d.consumedCount;
-    });
-});
-
+//
+// Sort Data
 data.sort(function(x, y){
   return d3.ascending(x.index, y.index);
 });
 
+var billIds = data.map( function(d) {
+      return d.billid;
+});
+
+
 //
 // Data Transform
 var series = d3.stack()
-    .keys(["apples", "bananas", "cherries"])
+    .keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
     (data);
 
-
 // Scales
 var svg = d3.select("svg"),
-    margin = {top: 20, right: 10, bottom: 30, left: 60},
+    margin = {top: m_top, right: m_right, bottom: m_bottom, left: m_left},
     width = +svg.attr("width"),
     height = +svg.attr("height");
 
 var y = d3.scaleBand()
-    .domain(countryNames)
+    .domain(billIds)
     .rangeRound([margin.top, height - margin.bottom])
-    .padding(0.1);
+    .padding(0.4);
 
 var x = d3.scaleLinear()
     .domain([d3.min(series, stackMin), d3.max(series, stackMax)])
@@ -79,43 +73,46 @@ var x = d3.scaleLinear()
 
 var z = d3.scaleOrdinal(d3.schemeCategory10);
 //var z = d3.scaleOrdinal()
-//          .domain(fruitNames)
+//          .domain(itemNames)
 //          .range(["#d62728", "#2ca02c", "#9467bd"]);
 
 
 //
-// DBG
-var layers = fruitNames.map(function(fruitName) {
-    return data.map(function(d) {
-        return {"y": y(d.country), "x": d[fruitName], "fruitName":fruitName};
-    });
-});
-
-//
 // Rendering
-svg.append("g")
-  .selectAll("g")
-  .data(series)
-  .enter().append("g")
-    .attr("fill", function(d) { return z(d.key); })
-  .selectAll("rect")
-  .data(function(d) { return d; })
-  .enter().append("rect")
-    .attr("height", y.bandwidth)
-    .attr("y", function(d) { return y(d.data.country); })
-    .attr("x", function(d) { return x(d[0]); })
-    .attr("width", function(d) { return x(d[1]) - x(d[0]); })
-    .on("mouseover", function(d){tooltip.text(d[1]-d[0]); return tooltip.style("visibility", "visible");})
-    .on("mousemove", function(){return tooltip.style("top", (event.pageY-10)+"px").style("left",(event.pageX+10)+"px");})
-    .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+function render() {
+  svg.append("g")
+       .attr("class", "container")
+     .selectAll("g")
+     .data(series)
+     .enter().append("g")
+       .attr("class", "layer")
+       .attr("fill", function(d) { return z(d.key); })
+     .selectAll("rect")
+     .data(function(d) { return d; })
+     .enter().append("rect")
+       .attr("class", "bar")
+       .attr("height", y.bandwidth)
+       .attr("x", function(d) { return x(d[0]); })
+       .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+       .attr("y", function(d) { return y(d.data.billid); })
+       .on("mouseover", function(d){tooltip.text(d[1]-d[0]); return tooltip.style("visibility", "visible");})
+       .on("mousemove", function(){return tooltip.style("top", (event.pageY-10)+"px").style("left",(event.pageX+10)+"px");})
+       .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+
+  svg.selectAll("g.layer").exit().remove();
+}
 
 svg.append("g")
+    .attr("class", "x--axis")
     .attr("transform", "translate(0," + margin.top + ")")
     .call(d3.axisTop(x));
 
 svg.append("g")
-    .attr("transform", "translate(" + margin.left + ",0)")
+    .attr("class", "y--axis")
+    .attr("transform", "translate(" + (margin.left - 10) + ",0)")
     .call(d3.axisLeft(y));
+
+render();
 
 function stackMin(serie) {
   return d3.min(serie, function(d) { return d[0]; });
@@ -123,6 +120,79 @@ function stackMin(serie) {
 
 function stackMax(serie) {
   return d3.max(serie, function(d) { return d[1]; });
+}
+
+d3.selectAll("input")
+    .on("change", changed);
+
+function changed() {
+  if (this.value === "orderbyindex") orderByIndex();
+  else if (this.value === "orderbyagree") orderByAgree();
+}
+
+function orderByIndex() {
+  console.log("orderByIndex called.");
+  data.sort(function(x, y){
+    return d3.ascending(x.index, y.index);
+  });
+
+  var _billIds = data.map( function(d) {
+        return d.billid;
+  });
+
+  y.domain(_billIds);
+
+  d3.select(".y--axis").call(d3.axisLeft(y));
+
+  series = d3.stack()
+    .keys(["agree", "disagree"])
+    .offset(d3.stackOffsetDiverging)
+    (data);
+
+  svg.selectAll("g.layer")
+    .data(series)
+      .attr("fill", function(d) { return z(d.key); })
+    .selectAll("rect.bar")
+    .data(function(d) { return d; })
+      .attr("height", y.bandwidth)
+      .attr("y", function(d) { return y(d.data.billid); })
+      .attr("x", function(d) { return x(d[0]); })
+      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
+
+}
+
+function orderByAgree() {
+  console.log("orderByAgree called.");
+
+  data.sort(function(x, y){
+    return d3.descending(x.agree, y.agree);
+  });
+
+  var _billIds = data.map( function(d) {
+        return d.billid;
+  });
+
+  y.domain(_billIds);
+
+  d3.select(".y--axis").call(d3.axisLeft(y));
+
+  series = d3.stack()
+    .keys(["agree", "disagree"])
+    .offset(d3.stackOffsetDiverging)
+    (data);
+
+  svg.selectAll("g.layer")
+    .data(series)
+      .attr("fill", function(d) { return z(d.key); })
+    .selectAll("rect.bar")
+    .data(function(d) {
+      console.log("d:" + JSON.stringify(d));
+      return d;
+    })
+      .attr("height", y.bandwidth)
+      .attr("y", function(d) { return y(d.data.billid); })
+      .attr("x", function(d) { return x(d[0]); })
+      .attr("width", function(d) { return x(d[1]) - x(d[0]); });
 }
 
 //
