@@ -9,7 +9,7 @@
 
 <div id="container" class="svg-container">
   <svg style="width:100%; height:100%;"
-       viewBox="0 0 960 600"
+       viewBox="0 0 640 400"
        preserveAspectRatio="xMidYMid meet">
   </svg>
 </div>
@@ -17,26 +17,28 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 
 <script>
-var m_top = 40;
+var m_top = 60;
 var m_bottom = 30;
 var m_left = 70;
-var m_right = 5;
+var m_right = 30;
 var width = 640;
 var height = 400;
+var axisTransitionDuration = 700;
+var reRenderTransitionDuration = 1000;
 
-var data = [
+var dataset = [
   {billid: "HB 4643", agree: 67, disagree: 54, index: 0},
   {billid: "HB 6066", agree: 87, disagree: 44, index: 1},
   {billid: "HB 5851", agree: 160, disagree: 34, index: 3},
   {billid: "HB 5400", agree: 58, disagree: 18, index: 2}
 ];
 
-var itemNames = d3.keys(data[0]).filter(function(key) {
-                                    if (key !== "billid" && key !== "index")
-                                      return true;
-                                    else
-                                      return false;
-                 });
+var itemNames = d3.keys(dataset[0]).filter(function(key) {
+                              if (key !== "billid" && key !== "index")
+                                return true;
+                              else
+                                return false;
+                });
 
 var tooltip = d3.select("body")
                 .append("div")
@@ -48,11 +50,11 @@ var tooltip = d3.select("body")
 
 //
 // Sort Data
-data.sort(function(x, y){
+dataset.sort(function(x, y){
   return d3.ascending(x.index, y.index);
 });
 
-var billIds = data.map( function(d) {
+var billIds = dataset.map( function(d) {
       return d.billid;
 });
 
@@ -62,7 +64,7 @@ var billIds = data.map( function(d) {
 var series = d3.stack()
     .keys(itemNames) //.keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
-    (data);
+    (dataset);
 
 
 // Scales
@@ -113,14 +115,14 @@ function renderGraph() {
 function renderXaxis() {
   svg.append("g")
       .attr("class", "x--axis")
-      .attr("transform", "translate(0," + margin.top + ")")
+      .attr("transform", "translate(0," + m_top + ")")
       .call(d3.axisTop(x));
 }
 
 function renderYaxis() {
   svg.append("g")
       .attr("class", "y--axis")
-      .attr("transform", "translate(" + (margin.left - 10) + ",0)")
+      .attr("transform", "translate(" + (m_left - 10) + ",0)")
       .call(d3.axisLeft(y));
 }
 
@@ -145,7 +147,8 @@ function orderByChanged() {
   else if (this.value === "orderbydisagree") orderByDisagree();
 }
 
-function updateGraph() {
+
+function reRenderGraph() {
   svg.selectAll("g.layer")
     .data(series)
       .attr("fill", function(d) {
@@ -158,6 +161,8 @@ function updateGraph() {
       return d;
     })
       .transition()
+      .ease(d3.easeExp)
+      .duration(axisTransitionDuration)
       .attr("height", y.bandwidth)
       .attr("y", function(d) {
         console.log("2: d:" + JSON.stringify(d));
@@ -173,7 +178,7 @@ function orderByIndex() {
   console.log("orderByIndex called.");
 
   // Data Transfrom
-  data.sort(function(x, y){
+  dataset.sort(function(x, y){
     return d3.ascending(x.index, y.index);
   });
 
@@ -181,26 +186,30 @@ function orderByIndex() {
   series = d3.stack()
     .keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
-    (data);
+    (dataset);
 
-  // Domain Update
-  var _billIds = data.map( function(d) {
+  // Y Domain Update
+  var _billIds = dataset.map( function(d) {
         return d.billid;
   });
   y.domain(_billIds);
 
   // Y Axis Update
-  d3.select(".y--axis").transition().call(d3.axisLeft(y));
+  d3.select(".y--axis")
+    .transition()
+    .ease(d3.easeExp)
+    .duration(reRenderTransitionDuration)
+    .call(d3.axisLeft(y));
 
-  // Update Graph
-  updateGraph();
+  // Re-render Graph
+  reRenderGraph();
 }
 
 function orderByAgree() {
   console.log("orderByAgree called.");
 
   // Data Transfrom
-  data.sort(function(x, y){
+  dataset.sort(function(x, y){
     return d3.descending(x.agree, y.agree);
   });
 
@@ -208,19 +217,23 @@ function orderByAgree() {
   series = d3.stack()
     .keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
-    (data);
+    (dataset);
 
-  // Domain Update
-  var _billIds = data.map( function(d) {
+  // Y Domain Update
+  var _billIds = dataset.map( function(d) {
         return d.billid;
   });
   y.domain(_billIds);
 
   // Y Axis Update
-  d3.select(".y--axis").transition().call(d3.axisLeft(y));
+  d3.select(".y--axis")
+    .transition()
+    .ease(d3.easeExp)
+    .duration(reRenderTransitionDuration)
+    .call(d3.axisLeft(y));
 
-  // Update Graph
-  updateGraph();
+  // Re-render Graph
+  reRenderGraph();
 
 }
 
@@ -228,7 +241,7 @@ function orderByDisagree() {
   console.log("orderByDisagree called.");
 
   // Data Transfrom
-  data.sort(function(x, y){
+  dataset.sort(function(x, y){
     return d3.descending(x.disagree, y.disagree);
   });
 
@@ -236,19 +249,23 @@ function orderByDisagree() {
   series = d3.stack()
     .keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
-    (data);
+    (dataset);
 
-  // Domain Update
-  var _billIds = data.map( function(d) {
+  // Y Domain Update
+  var _billIds = dataset.map( function(d) {
         return d.billid;
   });
   y.domain(_billIds);
 
   // Y Axis Update
-  d3.select(".y--axis").transition().call(d3.axisLeft(y));
+  d3.select(".y--axis")
+    .transition()
+    .ease(d3.easeExp)
+    .duration(reRenderTransitionDuration)
+    .call(d3.axisLeft(y));
 
-  // Update Graph
-  updateGraph();
+  // Re-render Graph
+  reRenderGraph();
 }
 
 //
@@ -257,10 +274,8 @@ var legend = svg.selectAll(".legend")
     .data(series.slice(0))
     .enter().append("g")
       .attr("class", "legend")
-      .attr("transform", function(d, i) { return "translate(-20," + i * 20 + ")"; })
+      .attr("transform", function(d, i) { return "translate(-" + (width / 6) +"," + i * 20 + ")"; })
       .style("font", "10px sans-serif");
-
-  d3.select('svg').attr("width", width + margin.right + margin.left);
 
   legend.append("rect")
       .attr("x", width + 18)
