@@ -6,20 +6,27 @@
   <label><input type="radio" name="orderby" value="orderbyagree" > Order By Agree </label>
 </form>
 
-<svg width="640" height="400"></svg>
+<div id="container" class="svg-container">
+  <svg style="width:100%; height:100%;"
+       viewBox="0 0 960 600"
+       preserveAspectRatio="xMidYMid meet">
+  </svg>
+</div>
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
 
 <script>
-var m_top = 20;
+var m_top = 40;
 var m_bottom = 30;
 var m_left = 70;
-var m_right = 10;
+var m_right = 5;
+var width = 640;
+var height = 400;
 
 var data = [
   {billid: "HB 4643", agree: 67, disagree: 54, index: 0},
   {billid: "HB 6066", agree: 87, disagree: 44, index: 1},
-  {billid: "HB 5851", agree: 97, disagree: 34, index: 2},
+  {billid: "HB 5851", agree: 160, disagree: 34, index: 2},
   {billid: "HB 5400", agree: 58, disagree: 18, index: 3}
 ];
 
@@ -58,18 +65,17 @@ var series = d3.stack()
 
 // Scales
 var svg = d3.select("svg"),
-    margin = {top: m_top, right: m_right, bottom: m_bottom, left: m_left},
-    width = +svg.attr("width"),
-    height = +svg.attr("height");
+    margin = {top: m_top, right: m_right, bottom: m_bottom, left: m_left};
+
 
 var y = d3.scaleBand()
     .domain(billIds)
-    .rangeRound([margin.top, height - margin.bottom])
+    .rangeRound([m_top, height - m_bottom])
     .padding(0.4);
 
 var x = d3.scaleLinear()
     .domain([d3.min(series, stackMin), d3.max(series, stackMax)])
-    .rangeRound([margin.left, width- margin.right]);
+    .rangeRound([m_left, width - m_right]);
 
 var z = d3.scaleOrdinal(d3.schemeCategory10);
 //var z = d3.scaleOrdinal()
@@ -132,18 +138,22 @@ function changed() {
 
 function orderByIndex() {
   console.log("orderByIndex called.");
+
+  // Data Transfrom
   data.sort(function(x, y){
     return d3.ascending(x.index, y.index);
   });
 
+  // Domain Update
   var _billIds = data.map( function(d) {
         return d.billid;
   });
-
   y.domain(_billIds);
 
-  d3.select(".y--axis").call(d3.axisLeft(y));
+  // Y Axis Update
+  d3.select(".y--axis").transition().call(d3.axisLeft(y));
 
+  // Series Update
   series = d3.stack()
     .keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
@@ -154,6 +164,7 @@ function orderByIndex() {
       .attr("fill", function(d) { return z(d.key); })
     .selectAll("rect.bar")
     .data(function(d) { return d; })
+      .transition()
       .attr("height", y.bandwidth)
       .attr("y", function(d) { return y(d.data.billid); })
       .attr("x", function(d) { return x(d[0]); })
@@ -164,33 +175,46 @@ function orderByIndex() {
 function orderByAgree() {
   console.log("orderByAgree called.");
 
+  // Data Transfrom
   data.sort(function(x, y){
     return d3.descending(x.agree, y.agree);
   });
 
+  // Domain Update
   var _billIds = data.map( function(d) {
         return d.billid;
   });
-
   y.domain(_billIds);
 
-  d3.select(".y--axis").call(d3.axisLeft(y));
+  // Y Axis Update
+  d3.select(".y--axis").transition().call(d3.axisLeft(y));
 
+  // Series Update
   series = d3.stack()
     .keys(["agree", "disagree"])
     .offset(d3.stackOffsetDiverging)
     (data);
 
+  // Re-Render
   svg.selectAll("g.layer")
     .data(series)
-      .attr("fill", function(d) { return z(d.key); })
+      .attr("fill", function(d) {
+        console.log("0: d:" + JSON.stringify(d));
+        return z(d.key);
+      })
     .selectAll("rect.bar")
     .data(function(d) {
-      console.log("d:" + JSON.stringify(d));
+      console.log("1: d:" + JSON.stringify(d));
       return d;
     })
+      .transition()
       .attr("height", y.bandwidth)
-      .attr("y", function(d) { return y(d.data.billid); })
+      .attr("y", function(d) {
+        console.log("2: d:" + JSON.stringify(d));
+        console.log("2: d.data:" + JSON.stringify(d.data));
+        console.log("2: d.data.billid:" + JSON.stringify(d.data.billid));
+        return y(d.data.billid);
+      })
       .attr("x", function(d) { return x(d[0]); })
       .attr("width", function(d) { return x(d[1]) - x(d[0]); });
 }
@@ -218,5 +242,4 @@ var legend = svg.selectAll(".legend")
       .attr("dy", ".35em")
       .attr("text-anchor", "start")
       .text(function(d, i) {  return d.key; });
-
 </script>
